@@ -1,0 +1,27 @@
+package deppar;
+
+import java.util.HashMap;
+import java.lang.Long;
+import java.lang.Integer;
+
+public class Dictionary {
+	private HashMap<String, Long> form_num_dic = new HashMap<String, Long>();
+	private HashMap<String, Integer> pos_num_dic = new HashMap<String, Integer>();
+	private HashMap<String, Integer> deprel_num_dic = new HashMap<String, Integer>();
+
+	private long form_num_dic_size = 0;
+	private int pos_num_dic_size = 0;
+	private int deprel_num_dic_size = 0;
+
+	public Dictionary(){
+
+	}
+
+	public Construct(ArrayList<Sentence> sens){
+		for (Sentence s : sens){
+			for (Word w : s.getWordList()){
+
+			}
+		}
+	}
+}
