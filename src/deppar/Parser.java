@@ -152,13 +152,13 @@ public class Parser {
 					inference.addNeurons(3, hidden2);
 					inference.addMapping(new OutputMappingDenseToDense(hidden1tanh, hidden2, hidden2Parameters));
 					
-//					DenseNeuronArray output = new DenseNeuronArray(1);
-//					inference.addNeurons(4, output);
-//					
-//					inference.addMapping(new OutputMappingDenseToDense(hidden2, output, TanSigmoidLayer.singleton));
+					DenseNeuronArray output = new DenseNeuronArray(1);
+					inference.addNeurons(4, output);
+					
+					inference.addMapping(new OutputMappingDenseToDense(hidden2, output, TanSigmoidLayer.singleton));
 					
 					inferences.put(arc, inference);
-					outputNeurons.put(arc, hidden2);
+					outputNeurons.put(arc, output);
 					
 					Word head = s.getWordIndexAt(h);
 					Word child = s.getWordIndexAt(m);
@@ -176,10 +176,10 @@ public class Parser {
 					inference.init();
 					inference.forward();
 					
-					double arc_score = hidden2.getNeuron(0);
+					double arc_score = output.getNeuron(0);
 					double arc_cost_augmented_score = arc_score;
 					if (!s.goldArcs.contains(arc)){
-						arc_cost_augmented_score += 1;
+						arc_cost_augmented_score += 0.1;
 					}
 					
 					arc_scores.add(arc_score);
@@ -234,8 +234,13 @@ public class Parser {
 						continue;
 					}
 					else{
-						outputNeurons.get(a).addError(0, -1);
+						System.out.print("kkkkkkk" + score_map.get(a) + "\t" + outputNeurons.get(a).getNeuron(0));
+						outputNeurons.get(a).addError(0, -3.0);
+						System.out.println("hhhhhh" + outputNeurons.get(a));
 						inferences.get(a).backward();
+						System.out.println("*****");
+						inferences.get(a).printNeurons();
+						System.out.println("*****");
 
 					}
 				}
@@ -243,8 +248,13 @@ public class Parser {
 					if (predicted_arcs.contains(a)){
 						continue;
 					}else{
-						outputNeurons.get(a).addError(0, 1);
+						System.out.print("kkkkkkk" + score_map.get(a) + "\t" + outputNeurons.get(a).getNeuron(0));
+						outputNeurons.get(a).addError(0, 4.0);
+						System.out.println("hhhhhh" + outputNeurons.get(a));
 						inferences.get(a).backward();
+						System.out.println("*****");
+						inferences.get(a).printNeurons();
+						System.out.println("*****");
 					}
 				}
 				for(Arc a : arcs){
