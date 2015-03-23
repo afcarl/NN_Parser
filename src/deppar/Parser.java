@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 
+import jnn.features.FeatureVector;
 import jnn.functions.nonparametrized.TanSigmoidLayer;
 import jnn.functions.parametrized.DenseFullyConnectedLayer;
 import jnn.mapping.OutputMappingDenseToDense;
@@ -103,13 +104,21 @@ public class Parser {
 //		for (double x : n) {
 //			System.out.println(x);
 //		}
+		
+		FeatureVector.useMomentumDefault = true;
+		FeatureVector.learningRateDefault = 0.1;
+		
 		Parser parser = new Parser();
 		int inputSize = parser.getEmbedVecLenght() * 2 + 2;
-		int hiddenLayer1Dim = 200;
+		// for debugging purpose only
+		// int hiddenLayer1Dim = 200;
+		int hiddenLayer1Dim = 1;
+		
 		int hiddenLayer2Dim = 1;
 
 		DenseFullyConnectedLayer hidden1Parameters = new DenseFullyConnectedLayer(inputSize, hiddenLayer1Dim);
-		DenseFullyConnectedLayer hidden2Parameters = new DenseFullyConnectedLayer(hiddenLayer1Dim, hiddenLayer2Dim);
+		// debug purpose
+		//DenseFullyConnectedLayer hidden2Parameters = new DenseFullyConnectedLayer(hiddenLayer1Dim, hiddenLayer2Dim);
 		// FeatureVector.learningRateDefault = 0.000005;
 		
 		
@@ -139,10 +148,24 @@ public class Parser {
 					TreeInference inference = new TreeInference(0);
 					DenseNeuronArray input = new DenseNeuronArray(inputSize);
 					inference.addNeurons(0, input);
+					input.setName("input for arc:" + arc.toString());
+					
+					
 					DenseNeuronArray hidden1 = new DenseNeuronArray(hiddenLayer1Dim);
 					hidden1.setName("hidden 1 ");
 					inference.addNeurons(1, hidden1);
 					inference.addMapping(new OutputMappingDenseToDense(input, hidden1, hidden1Parameters));
+					
+					// a very simple model test if things work
+					
+					DenseNeuronArray hidden1tanh = new DenseNeuronArray(hiddenLayer1Dim);
+					hidden1tanh.setName("hidden 1 tanh ");
+					inference.addNeurons(2, hidden1tanh);
+					inference.addMapping(new OutputMappingDenseToDense(hidden1, hidden1tanh, TanSigmoidLayer.singleton));
+					DenseNeuronArray output = hidden1tanh;
+					// should only be use for debugging purpose
+					
+					/*
 					DenseNeuronArray hidden1tanh = new DenseNeuronArray(hiddenLayer1Dim);
 					hidden1tanh.setName("hidden 1 tanh ");
 					inference.addNeurons(2, hidden1tanh);
@@ -154,11 +177,17 @@ public class Parser {
 					
 					DenseNeuronArray output = new DenseNeuronArray(1);
 					inference.addNeurons(4, output);
+					output.setName("output for arc:" + arc.toString());
 					
 					inference.addMapping(new OutputMappingDenseToDense(hidden2, output, TanSigmoidLayer.singleton));
+					*/
+					
 					
 					inferences.put(arc, inference);
 					outputNeurons.put(arc, output);
+					
+					
+					
 					
 					Word head = s.getWordIndexAt(h);
 					Word child = s.getWordIndexAt(m);
@@ -167,7 +196,7 @@ public class Parser {
 //					System.out.println(child.form + "\t" + child.form_id);
 					
 					double[] dir_length = new double[2];
-					dir_length[0] = 1; //(h - m) > 0 ? 1: 0;
+					dir_length[0] = 0; //(h - m) > 0 ? 1: 0;
 				    dir_length[1] = 0; // Math.abs(h-m);
 
 					input.init();
@@ -226,40 +255,78 @@ public class Parser {
 			for (Arc a : s.goldArcs){
 				error -= score_map.get(a);
 			}
+			for (Arc a : predicted_arcs){
+				if(s.goldArcs.contains(a)) {
+					outputNeurons.get(a).addError(0, 1 - score_map.get(a));
+					inferences.get(a).backward();
+				}else{
+					outputNeurons.get(a).addError(0, -1 - score_map.get(a));
+					inferences.get(a).backward();
+				}
+			}
 			
-			
+			/* for debugging purpose
 //			if (error > 0){
 				for (Arc a : predicted_arcs){
 					if(s.goldArcs.contains(a)) {
 						continue;
 					}
 					else{
-						System.out.print("kkkkkkk" + score_map.get(a) + "\t" + outputNeurons.get(a).getNeuron(0));
-						outputNeurons.get(a).addError(0, -3.0);
-						System.out.println("hhhhhh" + outputNeurons.get(a));
+						//System.out.print("kkkkkkk" + score_map.get(a) + "\t" + outputNeurons.get(a).getNeuron(0));
+						outputNeurons.get(a).addError(0, -1 - score_map.get(a));
+						System.out.println("hhhhhh " + outputNeurons.get(a) + " hhhhh " + score_map.get(a));
+						
+						System.out.println("beforebefore");
+						System.out.println(outputNeurons.get(a));
+						System.out.println("beforebefore");
+						
 						inferences.get(a).backward();
-						System.out.println("*****");
-						inferences.get(a).printNeurons();
-						System.out.println("*****");
-
+						
+						//System.out.println("afterafter");
+						//inferences.get(a).printNeurons();
+						//System.out.println("afterafter");
+//						
+//						inferences.get(a).commit(0.1);
+//						inferences.get(a).init();
+//						inferences.get(a).forward();
+//						
+//						System.out.println("after+after");
+//						System.out.println(outputNeurons.get(a));
+//						System.out.println("after+after");
 					}
 				}
 				for (Arc a : s.goldArcs){
 					if (predicted_arcs.contains(a)){
 						continue;
 					}else{
-						System.out.print("kkkkkkk" + score_map.get(a) + "\t" + outputNeurons.get(a).getNeuron(0));
-						outputNeurons.get(a).addError(0, 4.0);
-						System.out.println("hhhhhh" + outputNeurons.get(a));
+						//System.out.print("kkkkkkk" + score_map.get(a) + "\t" + outputNeurons.get(a).getNeuron(0));
+						outputNeurons.get(a).addError(0, 1 - score_map.get(a));
+						//System.out.println("hhhhhh" + outputNeurons.get(a));
+						
+//						System.out.println("beforebefore");
+//						System.out.println(outputNeurons.get(a));
+//						System.out.println("beforebefore");
+						
 						inferences.get(a).backward();
-						System.out.println("*****");
-						inferences.get(a).printNeurons();
-						System.out.println("*****");
+						
+						//System.out.println("afterafter");
+						//inferences.get(a).printNeurons();
+						//System.out.println("afterafter");
+						
+//						inferences.get(a).commit(0.1);
+//						inferences.get(a).init();
+//						inferences.get(a).forward();
+//						
+//						System.out.println("after+after");
+//						System.out.println(outputNeurons.get(a));
+//						System.out.println("after+after");
 					}
 				}
-				for(Arc a : arcs){
-				inferences.get(a).commit(0.1);
-				}
+				*/
+				hidden1Parameters.updateWeights(0, 0);
+				// debug purpose
+				//hidden2Parameters.updateWeights(0, 0);
+				
 //				System.out.println("++++++");
 //				System.out.println(hidden1Parameters.toString());
 //				System.out.println(hidden2Parameters.toString());
